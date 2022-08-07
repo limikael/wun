@@ -1,8 +1,8 @@
-#include "wun_runner.h"
+#include "wunrt.h"
 #include <gtk/gtk.h>
 
 void usage() {
-	printf("Usage: wun <script.js|page.html>\n");
+	printf("Usage: wun <script.js>\n");
 	exit(1);
 }
 
@@ -12,9 +12,9 @@ int main(int argc, char* argv[]) {
 	if (argc!=2)
 		usage();
 
-	WUN_RUNNER *wr=wun_runner_create();
-	wun_runner_set_uri(wr,argv[1]);
-	wun_runner_run(wr);
+	WUNRT *wunrt=wunrt_create();
+	wunrt_set_uri(wunrt,argv[1]);
+	wunrt_run(wunrt);
 
 	gtk_main();
 
