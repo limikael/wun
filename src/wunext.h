@@ -4,13 +4,15 @@
 #include <gtk/gtk.h>
 #include <webkit2/webkit-web-extension.h>
 
+#define WUNEXT_WATCH_NCOND 6
+
 typedef struct {
 	int fd;
 	GIOChannel *channel;
-//	struct {
+	struct {
 		JSCValue *cb;
 		int source;
-//	} conditions[6];
+	} cond[WUNEXT_WATCH_NCOND];
 } WUNEXT_WATCH;
 
 typedef struct {

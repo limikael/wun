@@ -5,24 +5,33 @@
 #include <gio/gunixfdlist.h>
 #include "wunext.h"
 
-static gboolean wunext_on_watch(GIOChannel *source, GIOCondition condition, gpointer data) {
+static gboolean wunext_on_watch(GIOChannel *source, GIOCondition cond, gpointer data) {
 	WUNEXT *wunext=data;
-	WUNEXT_WATCH *watch=g_hash_table_lookup(wunext->watch_by_fd,GINT_TO_POINTER(g_io_channel_unix_get_fd(source)));
+	int fd=g_io_channel_unix_get_fd(source);
+	WUNEXT_WATCH *watch=g_hash_table_lookup(wunext->watch_by_fd,GINT_TO_POINTER(fd));
 	if (!watch) {
 		printf("warning: wunext_on_watch: Unknown file descriptor.\n");
 		return TRUE;
 	}
 
-	JSCValue *cb=watch->cb;
+	for (int i=0; i<WUNEXT_WATCH_NCOND; i++) {
+		if ((1<<i)&cond) {
+			if (watch->cond[i].source && watch->cond[i].cb) {
+				JSCValue *cb=watch->cond[i].cb;
 
-	if (watch->source)
-		g_source_remove(watch->source);
+				g_source_remove(watch->cond[i].source);
+				watch->cond[i].source=0;
+				watch->cond[i].cb=NULL;
 
-	watch->source=0;
-	watch->cb=NULL;
+				JSCValue *ret=jsc_value_function_call(cb,G_TYPE_INT,fd,G_TYPE_INT,1<<i,G_TYPE_NONE);
+				g_object_unref(cb);
+			}
 
-	JSCValue *ret=jsc_value_function_call(cb,G_TYPE_NONE);
-	g_object_unref(cb);
+			else {
+				printf("warning: wunext_on_watch: Triggered but no cb.\n");
+			}
+		}
+	}
 
 	return TRUE;
 }
@@ -32,17 +41,44 @@ static void wunext_add_fildes(WUNEXT *wunext, int fd) {
 
 	watch->fd=fd;
 	watch->channel=g_io_channel_unix_new(watch->fd);
-	watch->source=0;
+
+	for (int i=0; i<WUNEXT_WATCH_NCOND; i++) {
+		watch->cond[i].cb=NULL;
+		watch->cond[i].source=0;
+	}
 
 	g_hash_table_insert(wunext->watch_by_fd,GINT_TO_POINTER(fd),watch);
 }
 
+static void wunext_remove_fildes(WUNEXT *wunext, int fd) {
+	WUNEXT_WATCH *watch=g_hash_table_lookup(wunext->watch_by_fd,GINT_TO_POINTER(fd));
+	if (!watch) {
+		printf("warning: wunext_remove_fildes: Unknown file descriptor.\n");
+		return;
+	}
+
+	for (int i=0; i<WUNEXT_WATCH_NCOND; i++) {
+		if (watch->cond[i].source)
+			g_source_remove(watch->cond[i].source);
+
+		if (watch->cond[i].cb)
+			g_object_unref(watch->cond[i].cb);
+	}
+
+	g_hash_table_remove(wunext->watch_by_fd,GINT_TO_POINTER(fd));
+}
+
 static int sys_open(char *fn, int flags, WUNEXT *wunext) {
 	int fildes=open(fn,O_RDONLY|O_NONBLOCK);
-
 	wunext_add_fildes(wunext,fildes);
 
 	return fildes;
+}
+
+static int sys_close(int fildes, WUNEXT *wunext) {
+	wunext_remove_fildes(wunext,fildes);
+
+	return close(fildes);
 }
 
 static void sys_watch(int fd, int cond, JSCValue *cb, WUNEXT *wunext) {
@@ -52,13 +88,23 @@ static void sys_watch(int fd, int cond, JSCValue *cb, WUNEXT *wunext) {
 		return;
 	}
 
-	if (watch->source)
-		g_source_remove(watch->source);
+	if (!cond)
+		printf("sys_watch: No condition.\n");
 
-	watch->source=g_io_add_watch(watch->channel,G_IO_IN|G_IO_ERR,wunext_on_watch,wunext);
-	watch->cb=cb;
+	for (int i=0; i<WUNEXT_WATCH_NCOND; i++) {
+		if ((1<<i)&cond) {
+			if (watch->cond[i].source) {
+				g_source_remove(watch->cond[i].source);
+				g_object_unref(watch->cond[i].cb);
+			}
 
-	g_object_ref(cb);
+			if (cb) {
+				watch->cond[i].source=g_io_add_watch(watch->channel,1<<i,wunext_on_watch,wunext);
+				watch->cond[i].cb=cb;
+				g_object_ref(cb);
+			}
+		}
+	}
 }
 
 static JSCValue *sys_read(int fd, int size, WUNEXT *wunext) {
@@ -89,8 +135,19 @@ window_object_cleared_callback (WebKitScriptWorld *world,
 	JSCValue *sys=jsc_value_new_object(context,NULL,NULL);
 	jsc_context_set_value(context,"sys",sys);
 
+	jsc_value_object_set_property(sys,"G_IO_IN",jsc_value_new_number(context,G_IO_IN));
+	jsc_value_object_set_property(sys,"G_IO_OUT",jsc_value_new_number(context,G_IO_OUT));
+	jsc_value_object_set_property(sys,"G_IO_PRI",jsc_value_new_number(context,G_IO_PRI));
+	jsc_value_object_set_property(sys,"G_IO_ERR",jsc_value_new_number(context,G_IO_ERR));
+	jsc_value_object_set_property(sys,"G_IO_HUP",jsc_value_new_number(context,G_IO_HUP));
+	jsc_value_object_set_property(sys,"G_IO_NVAL",jsc_value_new_number(context,G_IO_NVAL));
+
 	jsc_value_object_set_property(sys,"open",
 		jsc_value_new_function(context,"open",G_CALLBACK(sys_open),wunext,NULL,G_TYPE_INT,2,G_TYPE_STRING,G_TYPE_INT)
+	);
+
+	jsc_value_object_set_property(sys,"close",
+		jsc_value_new_function(context,"close",G_CALLBACK(sys_close),wunext,NULL,G_TYPE_INT,1,G_TYPE_INT)
 	);
 
 	jsc_value_object_set_property(sys,"read",

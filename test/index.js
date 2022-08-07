@@ -10,12 +10,14 @@ console.log("Starting...");
 
 fildes=sys.open("/home/micke/Repo.lab/wun/test/fifo");
 
-function onRead() {
+function onRead(fd, cond) {
+	console.log("on read, fd="+fd+" cond="+cond);
+
 	let data=sys.read(fildes,1024);
 	console.log("read: "+String(data).trim());
 	el.value+=data;
 	document.write(data);
-	sys.watch(fildes,0,onRead);
+	sys.watch(fildes,sys.G_IO_IN,onRead);
 }
 
-sys.watch(fildes,sys.COND_IN,onRead);
+sys.watch(fildes,sys.G_IO_IN,onRead);
