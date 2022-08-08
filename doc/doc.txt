@@ -8,3 +8,7 @@ https://blogs.igalia.com/carlosgc/2013/09/10/webkit2gtk-web-process-extensions/
 
 https://stackoverflow.com/questions/41881844/javascriptcore-in-webkit2gtk-with-c
 https://stackoverflow.com/questions/56337164/how-to-expose-native-code-to-javascript-in-webkit2gtk
+
+uri scheme:
+
+https://webkitgtk.org/reference/webkit2gtk/stable/WebKitWebContext.html#webkit-web-context-register-uri-scheme

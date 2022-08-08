@@ -27,8 +27,9 @@ WUNRT *wunrt_create() {
 	g_signal_connect(wunrt->main_window, "destroy", G_CALLBACK(destroyWindowCb), NULL);
 	g_signal_connect(wunrt->web_view, "close", G_CALLBACK(closeWebViewCb), wunrt->main_window);
 
-	/*WebKitSettings *settings=webkit_web_view_get_settings(wr->web_view);
-	webkit_settings_set_enable_write_console_messages_to_stdout(settings,1);*/
+	WebKitSettings *settings=webkit_web_view_get_settings(wunrt->web_view);
+	webkit_settings_set_enable_write_console_messages_to_stdout(settings,1);
+	webkit_settings_set_allow_file_access_from_file_urls(settings,TRUE);
 
 	return wunrt;
 }
@@ -45,7 +46,7 @@ void wunrt_load_url(WUNRT *wunrt) {
 	asprintf(&html,
 		"<html>"
 		"<body></body>"
-		"<script src=\"%s\"></script>"
+		"<script src=\"%s\" type=\"module\"></script>"
 		"</html>",absurl);
 	webkit_web_view_load_html(wunrt->web_view,html,"file:///");
 
