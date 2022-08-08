@@ -8,10 +8,12 @@ typedef struct {
 	GtkWidget *main_window;
 	WebKitWebView *web_view;
 	char *uri;
+	char *library_path;
 } WUNRT;
 
 WUNRT *wunrt_create();
-void wunrt_run(WUNRT *wr);
-void wunrt_set_uri(WUNRT *wr, char *uri);
+void wunrt_run(WUNRT *wunrt);
+void wunrt_set_uri(WUNRT *wunrt, char *uri);
+void wunrt_set_library_path(WUNRT *wunrt, char *path);
 
 #endif

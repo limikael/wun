@@ -1,19 +1,54 @@
 #include "wunrt.h"
 #include <gtk/gtk.h>
+#include <getopt.h>
+
+#ifndef WUN_DEFAULT_LIBRARY_PATH
+#define WUN_DEFAULT_LIBRARY_PATH "/usb/lib/wun"
+#endif
 
 void usage() {
-	printf("Usage: wun <script.js>\n");
+	printf(
+		"Usage: wun [options] <script.js>\n\n"
+		"Options: \n\n"
+		"    -l, --library-path=...\n"
+		"        Where to look to libraries and default modules.\n\n"
+		);
 	exit(1);
 }
 
 int main(int argc, char* argv[]) {
 	gtk_init(&argc, &argv);
 
-	if (argc!=2)
+	WUNRT *wunrt=wunrt_create();
+	wunrt_set_library_path(wunrt,WUN_DEFAULT_LIBRARY_PATH);
+
+	char *short_options="l:";
+	struct option long_options[]={
+		{"library-path",1,NULL,'l'},
+		{NULL,0,NULL,0}
+	};
+
+	int next_option;
+	do {
+		next_option=getopt_long(argc,argv,short_options,long_options,NULL);
+		switch (next_option) {
+			case 'l':
+				wunrt_set_library_path(wunrt,optarg);
+				break;
+
+			case -1:
+				break;
+
+			default:
+				usage();
+				break;
+		}
+	} while (next_option!=-1);
+
+	if (optind!=argc-1)
 		usage();
 
-	WUNRT *wunrt=wunrt_create();
-	wunrt_set_uri(wunrt,argv[1]);
+	wunrt_set_uri(wunrt,argv[optind]);
 	wunrt_run(wunrt);
 
 	gtk_main();

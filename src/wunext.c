@@ -68,28 +68,49 @@ static void wunext_remove_fildes(WUNEXT *wunext, int fd) {
 	g_hash_table_remove(wunext->watch_by_fd,GINT_TO_POINTER(fd));
 }
 
+static void wunext_throw(WUNEXT *wunext, char *func) {
+	JSCException *ex=jsc_exception_new_printf(wunext->context,
+		"%s: %s",func,strerror(errno)
+	);
+
+	jsc_context_throw_exception(wunext->context,ex);
+}
+
 static int sys_open(char *fn, int flags, WUNEXT *wunext) {
 	int fildes=open(fn,O_RDONLY|O_NONBLOCK);
+	if (fildes==-1) {
+		wunext_throw(wunext,"open");
+		return 0;
+	}
+
 	wunext_add_fildes(wunext,fildes);
 
 	return fildes;
 }
 
-static int sys_close(int fildes, WUNEXT *wunext) {
+static void sys_close(int fildes, WUNEXT *wunext) {
 	wunext_remove_fildes(wunext,fildes);
-
-	return close(fildes);
+	if (close(fildes)==-1)
+		wunext_throw(wunext,"close");
 }
 
 static void sys_watch(int fd, int cond, JSCValue *cb, WUNEXT *wunext) {
 	WUNEXT_WATCH *watch=g_hash_table_lookup(wunext->watch_by_fd,GINT_TO_POINTER(fd));
 	if (!watch) {
-		printf("warning: sys_watch: Unknown file descriptor.\n");
+		jsc_context_throw_exception(wunext->context,jsc_exception_new_printf(
+			wunext->context,
+			"watch: Unknown file descriptor"
+		));
 		return;
 	}
 
-	if (!cond)
-		printf("sys_watch: No condition.\n");
+	if (!cond) {
+		jsc_context_throw_exception(wunext->context,jsc_exception_new_printf(
+			wunext->context,
+			"watch: Unknown condition"
+		));
+		return;
+	}
 
 	for (int i=0; i<WUNEXT_WATCH_NCOND; i++) {
 		if ((1<<i)&cond) {
@@ -110,8 +131,18 @@ static void sys_watch(int fd, int cond, JSCValue *cb, WUNEXT *wunext) {
 static JSCValue *sys_read(int fd, int size, WUNEXT *wunext) {
 	char *data=g_malloc(size);
 	int actualsize=read(fd,data,size);
-	data=g_realloc(data,actualsize);
+	if (actualsize==-1) {
+		wunext_throw(wunext,"read");
+		g_free(data);
+		return NULL;
+	}
 
+	if (actualsize==0) {
+		g_free(data);
+		return jsc_value_new_null(wunext->context);
+	}
+
+	data=g_realloc(data,actualsize);
 	GBytes *bytes=g_bytes_new_take(data,actualsize);
 
 	return jsc_value_new_string_from_bytes(wunext->context,bytes);
@@ -147,7 +178,7 @@ window_object_cleared_callback (WebKitScriptWorld *world,
 	);
 
 	jsc_value_object_set_property(sys,"close",
-		jsc_value_new_function(context,"close",G_CALLBACK(sys_close),wunext,NULL,G_TYPE_INT,1,G_TYPE_INT)
+		jsc_value_new_function(context,"close",G_CALLBACK(sys_close),wunext,NULL,G_TYPE_NONE,1,G_TYPE_INT)
 	);
 
 	jsc_value_object_set_property(sys,"read",

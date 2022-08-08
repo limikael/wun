@@ -1,14 +1,22 @@
-import fs from "./fs.js";//"/home/micke/Repo.lab/wun/test/fs.js";
+import fs from "wun:fs";
+console.log("i'm running...");
 
-console.log("read file: "+fs.readFileSync("/home/micke/Repo.lab/wun/test/myfile.txt"));
-
-let fildes;
 let el=document.createElement("textarea");
 el.style.width="100%";
 el.style.height="24em";
+document.body.appendChild(el);
+
 el.value="Testing stufff...\n";
 
-document.body.appendChild(el);
+console.log("textarea created...");
+
+el.value+=fs.readFileSync("test/myfile.txt");
+
+console.log("done...")
+/*console.log("read file: "+fs.readFileSync("/home/micke/Repo.lab/wun/test/myfile.txt"));
+
+let fildes;
+
 
 console.log("Starting...");
 
@@ -22,4 +30,4 @@ function onRead(fd, cond) {
 	sys.watch(fildes,sys.G_IO_IN,onRead);
 }
 
-sys.watch(fildes,sys.G_IO_IN,onRead);
+sys.watch(fildes,sys.G_IO_IN,onRead);*/
