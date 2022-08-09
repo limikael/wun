@@ -1,5 +1,4 @@
 #include "wunrt.h"
-#include "util.h"
 #include <stdio.h>
 #include <gtk/gtk.h>
 #include <webkit2/webkit2.h>
@@ -106,21 +105,19 @@ void wunrt_set_uri(WUNRT *wunrt, char *uri) {
 }
 
 void wunrt_load_url(WUNRT *wunrt) {
-	char *abspath,*absurl,*html;
-	abspath=realpath(wunrt->uri,NULL);
-	asprintf(&absurl,"filejs://%s",abspath);
-
-	asprintf(&html,
+	char *content=
 		"<html>"
 		"<body></body>"
 		"<script src=\"%s\" type=\"module\"></script>"
-		"</html>",absurl);
-	webkit_web_view_load_html(wunrt->web_view,html,"file:///");
-	//webkit_web_view_run_javascript(wunrt->web_view,"console.log('hello');",NULL,NULL,NULL);
+		"</html>";
 
-	free(html);
-	free(abspath);
-	free(absurl);
+	char *sourceuri=g_strdup_printf("filejs:%s",wunrt->uri);
+	char *html=g_strdup_printf(content,sourceuri);
+
+	webkit_web_view_load_html(wunrt->web_view,html,"file:///");
+
+	g_free(html);
+	g_free(sourceuri);
 }
 
 void wunrt_run(WUNRT *wunrt) {
