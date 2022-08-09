@@ -25,7 +25,7 @@ static gboolean wunwrt_on_load_failed (WebKitWebView  *web_view,
 	printf("load error\n");
 }
 
-static void wunrt_on_uri_scheme_request(WebKitURISchemeRequest *request, gpointer data) {
+static void wunrt_on_wun_request(WebKitURISchemeRequest *request, gpointer data) {
 	WUNRT *wunrt=data;
 	
 	const gchar *request_path=webkit_uri_scheme_request_get_path(request);
@@ -40,6 +40,25 @@ static void wunrt_on_uri_scheme_request(WebKitURISchemeRequest *request, gpointe
 	}
 
 	g_free(full_path);
+	GInputStream *stream=g_unix_input_stream_new(fildes,true);
+
+	webkit_uri_scheme_request_finish(request,stream,-1,"application/javascript");
+	g_object_unref(stream);
+}
+
+static void wunrt_on_filejs_request(WebKitURISchemeRequest *request, gpointer data) {
+	WUNRT *wunrt=data;
+	const gchar *request_path=webkit_uri_scheme_request_get_path(request);
+
+	/*printf("jsreq: %s\n",request_path);
+	exit(1);*/
+
+	int fildes=open(request_path,O_RDONLY);
+	if (fildes==-1) {
+		perror(g_strdup_printf("Error loading: %s",request_path));
+		exit(1);
+	}
+
 	GInputStream *stream=g_unix_input_stream_new(fildes,true);
 
 	webkit_uri_scheme_request_finish(request,stream,-1,"application/javascript");
@@ -69,7 +88,8 @@ WUNRT *wunrt_create() {
 	webkit_settings_set_allow_universal_access_from_file_urls(settings,TRUE);
 
 	WebKitWebContext *context=webkit_web_view_get_context(wunrt->web_view);
-	webkit_web_context_register_uri_scheme(context,"wun",wunrt_on_uri_scheme_request,wunrt,NULL);
+	webkit_web_context_register_uri_scheme(context,"wun",wunrt_on_wun_request,wunrt,NULL);
+	webkit_web_context_register_uri_scheme(context,"filejs",wunrt_on_filejs_request,wunrt,NULL);
 
 	return wunrt;
 }
@@ -88,7 +108,7 @@ void wunrt_set_uri(WUNRT *wunrt, char *uri) {
 void wunrt_load_url(WUNRT *wunrt) {
 	char *abspath,*absurl,*html;
 	abspath=realpath(wunrt->uri,NULL);
-	asprintf(&absurl,"file://%s",abspath);
+	asprintf(&absurl,"filejs://%s",abspath);
 
 	asprintf(&html,
 		"<html>"
@@ -96,6 +116,7 @@ void wunrt_load_url(WUNRT *wunrt) {
 		"<script src=\"%s\" type=\"module\"></script>"
 		"</html>",absurl);
 	webkit_web_view_load_html(wunrt->web_view,html,"file:///");
+	//webkit_web_view_run_javascript(wunrt->web_view,"console.log('hello');",NULL,NULL,NULL);
 
 	free(html);
 	free(abspath);
@@ -110,7 +131,7 @@ void wunrt_run(WUNRT *wunrt) {
 
 	char *extfn=g_strdup_printf("%s/%s",wunrt->library_path,"wunext.so");
 	if (!g_file_test(extfn,G_FILE_TEST_EXISTS)) {
-		printf("wunext.so not found in %s\n",wunrt->library_path);
+		printf("wunext.so not found at %s\n",extfn);
 		exit(1);
 	}
 

@@ -1,3 +1,7 @@
+#!/usr/bin/wun
+/*console.log("hello..");
+sys.exit();
+console.log("after..");*/
 import {spawn} from "wun:subprocess";
 
 let el=document.createElement("textarea");

@@ -210,6 +210,10 @@ static int sys_waitpid(int pid, WUNEXT *wunext) {
 	return status;
 }
 
+static void sys_exit(int code, WUNEXT *wunext) {
+	exit(code);
+}
+
 static void console_log(char *s) {
 	printf("%s\n",s);
 }
@@ -282,6 +286,10 @@ window_object_cleared_callback (WebKitScriptWorld *world,
 
 	jsc_value_object_set_property(sys,"waitpid",
 		jsc_value_new_function(context,"waitpid",G_CALLBACK(sys_waitpid),wunext,NULL,G_TYPE_INT,1,G_TYPE_INT)
+	);
+
+	jsc_value_object_set_property(sys,"exit",
+		jsc_value_new_function(context,"exit",G_CALLBACK(sys_exit),wunext,NULL,G_TYPE_NONE,0)
 	);
 
 	JSCValue *console=jsc_value_new_object(context,NULL,NULL);

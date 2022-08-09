@@ -3,7 +3,7 @@
 #include <getopt.h>
 
 #ifndef WUN_DEFAULT_LIBRARY_PATH
-#define WUN_DEFAULT_LIBRARY_PATH "/usb/lib/wun"
+#define WUN_DEFAULT_LIBRARY_PATH "/usr/lib/wun"
 #endif
 
 void usage() {
