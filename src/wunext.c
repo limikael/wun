@@ -77,7 +77,7 @@ static void wunext_throw(WUNEXT *wunext, char *func) {
 }
 
 static int sys_open(char *fn, int flags, WUNEXT *wunext) {
-	int fildes=open(fn,O_RDONLY|O_NONBLOCK);
+	int fildes=open(fn,flags);
 	if (fildes==-1) {
 		wunext_throw(wunext,"open");
 		return 0;
@@ -148,6 +148,57 @@ static JSCValue *sys_read(int fd, int size, WUNEXT *wunext) {
 	return jsc_value_new_string_from_bytes(wunext->context,bytes);
 }
 
+static int sys_write(int fd, JSCValue *data, WUNEXT *wunext) {
+	GBytes *bytes=jsc_value_to_string_as_bytes(data);
+	int written=write(fd,g_bytes_get_data(bytes,NULL),g_bytes_get_size(bytes));
+
+	if (written==-1) {
+		wunext_throw(wunext,"write");
+		return -1;
+	}
+
+	return written;
+}
+
+static int sys_fork(WUNEXT *wunext) {
+	int res=fork();
+
+	if (res==-1)
+		wunext_throw(wunext,"fork");
+
+	return res;
+}
+
+static void sys_exec(char *cmd, WUNEXT *wunext) {
+	char **args={NULL};
+
+	int res=execv(cmd,args);
+	if (res==-1)
+		wunext_throw(wunext,"exec");
+}
+
+static JSCValue *sys_pipe(WUNEXT *wunext) {
+	int pipes[2];
+	int res=pipe(pipes);
+
+	if (res==-1) {
+		wunext_throw(wunext,"pipe");
+		return NULL;
+	}
+
+	wunext_add_fildes(wunext,pipes[0]);
+	wunext_add_fildes(wunext,pipes[1]);
+
+	return jsc_value_new_array(wunext->context,G_TYPE_INT,pipes[0],G_TYPE_INT,pipes[1],G_TYPE_NONE);
+}
+
+static void sys_dup2(int a, int b, WUNEXT *wunext) {
+	int res=dup2(a,b);
+
+	if (res==-1)
+		wunext_throw(wunext,"dup2");
+}
+
 static void console_log(char *s) {
 	printf("%s\n",s);
 }
@@ -166,12 +217,21 @@ window_object_cleared_callback (WebKitScriptWorld *world,
 	JSCValue *sys=jsc_value_new_object(context,NULL,NULL);
 	jsc_context_set_value(context,"sys",sys);
 
+	jsc_value_object_set_property(sys,"O_NONBLOCK",jsc_value_new_number(context,O_NONBLOCK));
+	jsc_value_object_set_property(sys,"O_RDONLY",jsc_value_new_number(context,O_RDONLY));
+	jsc_value_object_set_property(sys,"O_WRONLY",jsc_value_new_number(context,O_WRONLY));
+	jsc_value_object_set_property(sys,"O_RDWR",jsc_value_new_number(context,O_RDWR));
+
 	jsc_value_object_set_property(sys,"G_IO_IN",jsc_value_new_number(context,G_IO_IN));
 	jsc_value_object_set_property(sys,"G_IO_OUT",jsc_value_new_number(context,G_IO_OUT));
 	jsc_value_object_set_property(sys,"G_IO_PRI",jsc_value_new_number(context,G_IO_PRI));
 	jsc_value_object_set_property(sys,"G_IO_ERR",jsc_value_new_number(context,G_IO_ERR));
 	jsc_value_object_set_property(sys,"G_IO_HUP",jsc_value_new_number(context,G_IO_HUP));
 	jsc_value_object_set_property(sys,"G_IO_NVAL",jsc_value_new_number(context,G_IO_NVAL));
+
+	jsc_value_object_set_property(sys,"STDIN_FILENO",jsc_value_new_number(context,STDIN_FILENO));
+	jsc_value_object_set_property(sys,"STDOUT_FILENO",jsc_value_new_number(context,STDOUT_FILENO));
+	jsc_value_object_set_property(sys,"STDERR_FILENO",jsc_value_new_number(context,STDERR_FILENO));
 
 	jsc_value_object_set_property(sys,"open",
 		jsc_value_new_function(context,"open",G_CALLBACK(sys_open),wunext,NULL,G_TYPE_INT,2,G_TYPE_STRING,G_TYPE_INT)
@@ -181,12 +241,32 @@ window_object_cleared_callback (WebKitScriptWorld *world,
 		jsc_value_new_function(context,"close",G_CALLBACK(sys_close),wunext,NULL,G_TYPE_NONE,1,G_TYPE_INT)
 	);
 
+	jsc_value_object_set_property(sys,"watch",
+		jsc_value_new_function(context,"watch",G_CALLBACK(sys_watch),wunext,NULL,G_TYPE_NONE,3,G_TYPE_INT,G_TYPE_INT,JSC_TYPE_VALUE)
+	);
+
 	jsc_value_object_set_property(sys,"read",
 		jsc_value_new_function(context,"read",G_CALLBACK(sys_read),wunext,NULL,JSC_TYPE_VALUE,2,G_TYPE_INT,G_TYPE_INT)
 	);
 
-	jsc_value_object_set_property(sys,"watch",
-		jsc_value_new_function(context,"watch",G_CALLBACK(sys_watch),wunext,NULL,G_TYPE_NONE,3,G_TYPE_INT,G_TYPE_INT,JSC_TYPE_VALUE)
+	jsc_value_object_set_property(sys,"write",
+		jsc_value_new_function(context,"write",G_CALLBACK(sys_read),wunext,NULL,G_TYPE_INT,2,G_TYPE_INT,G_TYPE_VALUE)
+	);
+
+	jsc_value_object_set_property(sys,"fork",
+		jsc_value_new_function(context,"fork",G_CALLBACK(sys_fork),wunext,NULL,G_TYPE_INT,0)
+	);
+
+	jsc_value_object_set_property(sys,"exec",
+		jsc_value_new_function(context,"exec",G_CALLBACK(sys_exec),wunext,NULL,G_TYPE_NONE,1,G_TYPE_STRING)
+	);
+
+	jsc_value_object_set_property(sys,"pipe",
+		jsc_value_new_function(context,"pipe",G_CALLBACK(sys_pipe),wunext,NULL,JSC_TYPE_VALUE,0)
+	);
+
+	jsc_value_object_set_property(sys,"dup2",
+		jsc_value_new_function(context,"dup2",G_CALLBACK(sys_dup2),wunext,NULL,G_TYPE_NONE,2,G_TYPE_INT,G_TYPE_INT)
 	);
 
 	JSCValue *console=jsc_value_new_object(context,NULL,NULL);

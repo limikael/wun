@@ -60,6 +60,7 @@ WUNRT *wunrt_create() {
 	g_signal_connect(wunrt->main_window, "destroy", G_CALLBACK(destroyWindowCb), NULL);
 	g_signal_connect(wunrt->web_view, "close", G_CALLBACK(closeWebViewCb), wunrt->main_window);
 
+	// use resource-load-started?
 	g_signal_connect(wunrt->web_view,"load-failed",G_CALLBACK(wunwrt_on_load_failed),wunrt);
 
 	WebKitSettings *settings=webkit_web_view_get_settings(wunrt->web_view);
