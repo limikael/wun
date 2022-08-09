@@ -2,6 +2,7 @@
 #include <gtk/gtk.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <sys/wait.h>
 #include <gio/gunixfdlist.h>
 #include "wunext.h"
 
@@ -199,6 +200,16 @@ static void sys_dup2(int a, int b, WUNEXT *wunext) {
 		wunext_throw(wunext,"dup2");
 }
 
+static int sys_waitpid(int pid, WUNEXT *wunext) {
+	int status;
+	int res=waitpid(pid,&status,0);
+
+	if (res==-1)
+		wunext_throw(wunext,"waitpid");
+
+	return status;
+}
+
 static void console_log(char *s) {
 	printf("%s\n",s);
 }
@@ -267,6 +278,10 @@ window_object_cleared_callback (WebKitScriptWorld *world,
 
 	jsc_value_object_set_property(sys,"dup2",
 		jsc_value_new_function(context,"dup2",G_CALLBACK(sys_dup2),wunext,NULL,G_TYPE_NONE,2,G_TYPE_INT,G_TYPE_INT)
+	);
+
+	jsc_value_object_set_property(sys,"waitpid",
+		jsc_value_new_function(context,"waitpid",G_CALLBACK(sys_waitpid),wunext,NULL,G_TYPE_INT,1,G_TYPE_INT)
 	);
 
 	JSCValue *console=jsc_value_new_object(context,NULL,NULL);
