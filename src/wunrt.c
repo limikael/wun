@@ -5,18 +5,24 @@
 #include <fcntl.h>
 #include <gio/gunixinputstream.h>
 
-static void destroyWindowCb(GtkWidget* widget, GtkWidget* window)
-{
+WUNRT *wunrt_create() {
+	WUNRT *wunrt=g_malloc(sizeof(WUNRT));
+
+	wunrt->library_path=NULL;
+	wunrt->web_view=NULL;
+	wunrt->main_window=NULL;
+	wunrt->width=800;
+	wunrt->height=600;
+	wunrt->title=NULL;
+
+	return wunrt;
+}
+
+static void wunrt_on_window_close(GtkWidget* widget, WUNRT *wunrt) {
 	gtk_main_quit();
 }
 
-static gboolean closeWebViewCb(WebKitWebView* webView, GtkWidget* window)
-{
-	gtk_widget_destroy(window);
-	return TRUE;
-}
-
-static gboolean wunwrt_on_load_failed (WebKitWebView  *web_view,
+static gboolean wunrt_on_load_failed (WebKitWebView  *web_view,
                WebKitLoadEvent load_event,
                char           *failing_uri,
                GError         *error,
@@ -64,22 +70,19 @@ static void wunrt_on_filejs_request(WebKitURISchemeRequest *request, gpointer da
 	g_object_unref(stream);
 }
 
-WUNRT *wunrt_create() {
-	WUNRT *wunrt=g_malloc(sizeof(WUNRT));
-
-	wunrt->library_path=NULL;
-
+// use resource-load-started?
+void wunrt_create_window(WUNRT *wunrt) {
 	wunrt->main_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_default_size(GTK_WINDOW(wunrt->main_window), 800, 600);
+	gtk_window_set_default_size(GTK_WINDOW(wunrt->main_window),wunrt->width,wunrt->height);
+
+	if (wunrt->title)
+		gtk_window_set_title(GTK_WINDOW(wunrt->main_window),wunrt->title);
 
 	wunrt->web_view = WEBKIT_WEB_VIEW(webkit_web_view_new());
 	gtk_container_add(GTK_CONTAINER(wunrt->main_window), GTK_WIDGET(wunrt->web_view));
 
-	g_signal_connect(wunrt->main_window, "destroy", G_CALLBACK(destroyWindowCb), NULL);
-	g_signal_connect(wunrt->web_view, "close", G_CALLBACK(closeWebViewCb), wunrt->main_window);
-
-	// use resource-load-started?
-	g_signal_connect(wunrt->web_view,"load-failed",G_CALLBACK(wunwrt_on_load_failed),wunrt);
+	g_signal_connect(wunrt->main_window, "destroy", G_CALLBACK(wunrt_on_window_close),wunrt);
+	g_signal_connect(wunrt->web_view,"load-failed",G_CALLBACK(wunrt_on_load_failed),wunrt);
 
 	WebKitSettings *settings=webkit_web_view_get_settings(wunrt->web_view);
 	webkit_settings_set_enable_write_console_messages_to_stdout(settings,TRUE);
@@ -89,19 +92,27 @@ WUNRT *wunrt_create() {
 	WebKitWebContext *context=webkit_web_view_get_context(wunrt->web_view);
 	webkit_web_context_register_uri_scheme(context,"wun",wunrt_on_wun_request,wunrt,NULL);
 	webkit_web_context_register_uri_scheme(context,"filejs",wunrt_on_filejs_request,wunrt,NULL);
-
-	return wunrt;
+	webkit_web_context_set_web_extensions_directory(context,wunrt->library_path);
 }
 
 void wunrt_set_library_path(WUNRT *wunrt, char *path) {
 	wunrt->library_path=path;
-
-	WebKitWebContext *context=webkit_web_view_get_context(wunrt->web_view);
-	webkit_web_context_set_web_extensions_directory(context,path);
 }
 
 void wunrt_set_uri(WUNRT *wunrt, char *uri) {
 	wunrt->uri=uri;
+}
+
+void wunrt_set_width(WUNRT *wunrt, int width) {
+	wunrt->width=width;
+}
+
+void wunrt_set_height(WUNRT *wunrt, int height) {
+	wunrt->height=height;
+}
+
+void wunrt_set_title(WUNRT *wunrt, char *title) {
+	wunrt->title=title;
 }
 
 void wunrt_load_url(WUNRT *wunrt) {
@@ -133,6 +144,8 @@ void wunrt_run(WUNRT *wunrt) {
 	}
 
 	g_free(extfn);
+
+	wunrt_create_window(wunrt);
 	wunrt_load_url(wunrt);
 
 	gtk_widget_grab_focus(GTK_WIDGET(wunrt->web_view));
