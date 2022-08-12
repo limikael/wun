@@ -170,8 +170,16 @@ static int sys_fork(WUNEXT *wunext) {
 	return res;
 }
 
-static void sys_exec(char *cmd, WUNEXT *wunext) {
-	char **args={NULL};
+static void sys_exec(char *cmd, JSCValue *params, WUNEXT *wunext) {
+	int len=jsc_value_to_int32(jsc_value_object_get_property(params,"length"));
+	char *args[len+2];
+
+	args[0]=cmd;
+
+	for (int i=0; i<len; i++)
+		args[i+1]=jsc_value_to_string(jsc_value_object_get_property_at_index(params,i));
+
+	args[len+1]=NULL;
 
 	int res=execv(cmd,args);
 	if (res==-1)
@@ -273,7 +281,7 @@ window_object_cleared_callback (WebKitScriptWorld *world,
 	);
 
 	jsc_value_object_set_property(sys,"exec",
-		jsc_value_new_function(context,"exec",G_CALLBACK(sys_exec),wunext,NULL,G_TYPE_NONE,1,G_TYPE_STRING)
+		jsc_value_new_function(context,"exec",G_CALLBACK(sys_exec),wunext,NULL,G_TYPE_NONE,2,G_TYPE_STRING,JSC_TYPE_VALUE)
 	);
 
 	jsc_value_object_set_property(sys,"pipe",

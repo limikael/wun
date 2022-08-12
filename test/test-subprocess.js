@@ -1,7 +1,8 @@
 #!/usr/bin/wun
 /*console.log("hello..");
-sys.exit();
+sys.exec("/bin/ls",["/"]);
 console.log("after..");*/
+
 import {spawn} from "wun:subprocess";
 
 let el=document.createElement("textarea");
@@ -10,7 +11,7 @@ el.style.height="24em";
 document.body.appendChild(el);
 el.value+="Testing subprocess...\n";
 
-let subprocess=spawn("./test/date100");
+let subprocess=spawn("/bin/ls","/");
 subprocess.on("data",(data)=>{
 	//console.log(data);
 	el.value+=data;
