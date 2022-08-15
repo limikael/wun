@@ -129,8 +129,8 @@ static void sys_watch(int fd, int cond, JSCValue *cb, WUNEXT *wunext) {
 	}
 }
 
-static JSCValue *sys_read(int fd, int size, WUNEXT *wunext) {
-	char *data=g_malloc(size);
+static JSCValue *sys_readCharCodeArray(int fd, int size, WUNEXT *wunext) {
+	unsigned char *data=g_malloc(size);
 	int actualsize=read(fd,data,size);
 	if (actualsize==-1) {
 		wunext_throw(wunext,"read");
@@ -143,10 +143,11 @@ static JSCValue *sys_read(int fd, int size, WUNEXT *wunext) {
 		return jsc_value_new_null(wunext->context);
 	}
 
-	data=g_realloc(data,actualsize);
-	GBytes *bytes=g_bytes_new_take(data,actualsize);
+	GPtrArray *array=g_ptr_array_sized_new(actualsize);
+	for (int i=0; i<actualsize; i++)
+		g_ptr_array_add(array,jsc_value_new_number(wunext->context,data[i]));
 
-	return jsc_value_new_string_from_bytes(wunext->context,bytes);
+	return jsc_value_new_array_from_garray(wunext->context,array);
 }
 
 static int sys_write(int fd, JSCValue *data, WUNEXT *wunext) {
@@ -268,12 +269,12 @@ window_object_cleared_callback (WebKitScriptWorld *world,
 		jsc_value_new_function(context,"watch",G_CALLBACK(sys_watch),wunext,NULL,G_TYPE_NONE,3,G_TYPE_INT,G_TYPE_INT,JSC_TYPE_VALUE)
 	);
 
-	jsc_value_object_set_property(sys,"read",
-		jsc_value_new_function(context,"read",G_CALLBACK(sys_read),wunext,NULL,JSC_TYPE_VALUE,2,G_TYPE_INT,G_TYPE_INT)
+	jsc_value_object_set_property(sys,"readCharCodeArray",
+		jsc_value_new_function(context,"readCharCodeArray",G_CALLBACK(sys_readCharCodeArray),wunext,NULL,JSC_TYPE_VALUE,2,G_TYPE_INT,G_TYPE_INT)
 	);
 
 	jsc_value_object_set_property(sys,"write",
-		jsc_value_new_function(context,"write",G_CALLBACK(sys_read),wunext,NULL,G_TYPE_INT,2,G_TYPE_INT,G_TYPE_VALUE)
+		jsc_value_new_function(context,"write",G_CALLBACK(sys_write),wunext,NULL,G_TYPE_INT,2,G_TYPE_INT,G_TYPE_VALUE)
 	);
 
 	jsc_value_object_set_property(sys,"fork",

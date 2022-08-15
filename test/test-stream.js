@@ -1,3 +1,5 @@
+console.log("testing...");
+
 import {fopen} from "wun:stream";
 
 let el=document.createElement("textarea");
@@ -10,4 +12,8 @@ el.value="Testing stufff...\n";
 let stream=fopen("test/myfile.txt");
 stream.on("data",(data)=>{
 	el.value+=data;
-})
+});
+
+stream.on("close",()=>{
+	console.log("done...");
+});
