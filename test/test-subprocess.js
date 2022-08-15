@@ -15,8 +15,9 @@ el.value+="Testing subprocess...\n";
 //let subprocess=spawn("test/date100");
 let subprocess=spawn("test/slow.sh");
 subprocess.on("data",(data)=>{
-	el.value+=data;
-	el.scrollTop = el.scrollHeight;
+	console.log(data);
+/*	el.value+=data;
+	el.scrollTop = el.scrollHeight;*/
 });
 subprocess.on("close",(status)=>{
 	el.value+="Process closed: "+status+"\n";

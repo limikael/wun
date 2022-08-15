@@ -147,7 +147,12 @@ static JSCValue *sys_readCharCodeArray(int fd, int size, WUNEXT *wunext) {
 	for (int i=0; i<actualsize; i++)
 		g_ptr_array_add(array,jsc_value_new_number(wunext->context,data[i]));
 
-	return jsc_value_new_array_from_garray(wunext->context,array);
+	JSCValue *v=jsc_value_new_array_from_garray(wunext->context,array);
+
+	g_free(data);
+	g_ptr_array_free(array,TRUE);
+
+	return v;
 }
 
 static int sys_write(int fd, JSCValue *data, WUNEXT *wunext) {
