@@ -47,6 +47,10 @@ mkdir -p "$tmp"/etc/apk
 makefile root:root 0644 "$tmp"/etc/apk/world <<EOF
 alpine-base
 openssh
+eudev
+eudev-openrc
+udev-init-scripts
+udev-init-scripts-openrc
 nano
 grub-bios
 grub
@@ -58,6 +62,8 @@ EOF
 rc_add devfs sysinit
 rc_add dmesg sysinit
 rc_add udev sysinit
+rc_add udev-settle sysinit
+rc_add udev-trigger sysinit
 rc_add hwdrivers sysinit
 rc_add modloop sysinit
 
@@ -71,6 +77,7 @@ rc_add syslog boot
 rc_add mount-ro shutdown
 rc_add killprocs shutdown
 rc_add savecache shutdown
+rc_add udev-postmount default
 
 rc_add sshd default
 rc_add virtualbox-guest-additions
