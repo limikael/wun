@@ -1,6 +1,8 @@
 setup-xorg-base
 
-apk add xfce4 xfce4-terminal xfce4-screensaver lightdm-gtk-greeter dbus elogind polkit-elogind
+apk add mesa-dri-gallium mesa-utils
+
+apk add xfce4 xfce4-terminal xfce4-screensaver lightdm-gtk-greeter dbus elogind polkit-elogind 
 
 rc-service dbus start
 rc-update add dbus

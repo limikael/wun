@@ -20,3 +20,10 @@
 ref:
 
 	https://wiki.alpinelinux.org/wiki/Setting_up_disks_manually
+
+
+for x:
+
+not: mesa-vulkan-swrast
+
+mesa-dri-gallium

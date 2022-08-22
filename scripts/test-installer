@@ -25,6 +25,8 @@ VBoxManage storageattach installerdebug --storagectl "IDE Controller" --port 1 -
 VBoxManage modifyvm installerdebug --boot1 dvd --boot2 disk --boot3 none --boot4 none
 
 VBoxManage sharedfolder add installerdebug --name moonflower --hostpath /home/micke/Repo.lab/moonflower
+VBoxManage sharedfolder add installerdebug --name micke --hostpath /home/micke/
+
 VBoxManage startvm installerdebug
 
 echo "Waiting for machine to come online"
@@ -33,6 +35,3 @@ do
 	echo "Waiting..."
 	sleep 1
 done
-
-#scp -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no ./scripts/setup.txt root@192.168.1.17:/root/
-#scp -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no ./scripts/setup.sh root@192.168.1.17:/root/
