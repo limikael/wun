@@ -6,10 +6,10 @@ install:
 	cp bin/wun /usr/bin
 
 bin/wun: $(wildcard src/*.c src/*.h)
-	gcc $$(pkg-config --cflags --libs webkit2gtk-4.0) src/wun.c src/wunrt.c -o bin/wun
+	gcc -o bin/wun src/wun.c src/wunrt.c $$(pkg-config --cflags --libs webkit2gtk-4.0)
 
 lib/wunext.so: $(wildcard src/*.c src/*.h)
-	gcc $$(pkg-config --cflags --libs webkit2gtk-4.0) -shared -o lib/wunext.so -fPIC src/wunext.c
+	gcc -shared -o lib/wunext.so -fPIC src/wunext.c $$(pkg-config --cflags --libs webkit2gtk-4.0)
 
 clean:
 	rm bin/* lib/wunext.so
