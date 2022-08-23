@@ -1,8 +1,0 @@
-console.log("hello world");
-
-let el=document.createElement("textarea");
-el.style.width="100%";
-el.style.height="24em";
-document.body.appendChild(el);
-
-el.value="Hello";

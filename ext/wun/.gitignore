@@ -1,5 +1,0 @@
-attic
-bin
-lib/wunext.so
-build/keys/*.rsa
-build/out
