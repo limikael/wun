@@ -1,7 +1,5 @@
-apkroot
-apks
 attic
-iso
-tmp
-vm
-abuild
+bin
+lib/wunext.so
+build/keys/*.rsa
+build/out

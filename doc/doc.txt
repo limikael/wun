@@ -1,22 +1,20 @@
-https://wiki.alpinelinux.org/wiki/How_to_make_a_custom_ISO_image_with_mkimage
-https://eyedeekay.github.io/kloster/
-https://techoverflow.net/2021/05/03/how-to-check-enable-dhcp-in-alpine-linux-installer/
+capture console:
+
+https://webkitgtk.org/reference/webkit2gtk/stable/WebKitUserContentManager.html#webkit-user-content-manager-register-script-message-handler
+
+adding functions:
+
+https://blogs.igalia.com/carlosgc/2013/09/10/webkit2gtk-web-process-extensions/
+
+https://stackoverflow.com/questions/41881844/javascriptcore-in-webkit2gtk-with-c
+https://stackoverflow.com/questions/56337164/how-to-expose-native-code-to-javascript-in-webkit2gtk
+
+uri scheme:
+
+https://webkitgtk.org/reference/webkit2gtk/stable/WebKitWebContext.html#webkit-web-context-register-uri-scheme
 
 ---
 
-apk add --keys-dir /etc/apk/keys/ --root /mnt --initdb --no-scripts --repository /root/moonflower/apks alpine-base doas e2fsprogs grub grub-bios nano openssh openssl sshfs syslinux virtualbox-guest-additions acct linux-lts alpine-base syslinux linux-firmware-none
+apk add webkit2gtk-dev
 
-apk add --no-cache --keys-dir /etc/apk/keys/ --root /mnt --initdb --repository /root/moonflower/apks alpine-base linux-lts linux-firmware-none
----
-
-docker run -it -u build -v /home/micke/Repo.lab/moonflower/apks:/apks -v /home/micke/Repo.lab/moonflower/iso:/iso moonflower-builder /home/build/aports/scripts/mkimage.sh --tag latest --outdir /iso --arch x86_64 --repository /apks --hostkeys --profile moonflower
-
-docker run -it -u build -v /home/micke/Repo.lab/moonflower/apks:/apks -v /home/micke/Repo.lab/moonflower/iso:/iso moonflower-builder /home/build/aports/scripts/mkimage.sh --tag latest --outdir /iso --arch x86_64 --repository /apks --hostkeys --profile installerdebug
-
-apk add --root /mnt --initdb --repository /root/moonflower/apks alpine-base doas e2fsprogs grub grub-bios nano openssh openssl sshfs syslinux virtualbox-guest-additions acct linux-lts alpine-base syslinux linux-firmware-none
-
-ssh -lroot -p2222 -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no localhost
-
----
-
-BOOT_IMAGE=vmlinuz-lts root=UUID=c91cd526-8ebc-40f7-862e-291be56c3055 modules=sd-mod,usb-storage,ext4 quiet rootfstype=ext4 initrd=initramfs-lts
+xf86-video-vboxvideo
