@@ -347,7 +347,8 @@ grub \
 grub-bios \
 grub-efi \
 virtualbox-guest-additions \
-sfdisk
+sfdisk \
+mesa-dri-gallium
 
 rm ./apks/x86_64/APKINDEX.tar.gz
 apk --root=apkroot index -o apks/x86_64/APKINDEX.tar.gz --rewrite-arch x86_64 apks/x86_64/*.apk

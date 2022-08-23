@@ -29,18 +29,22 @@ trap cleanup EXIT
 
 mkdir -p "$tmp"/etc/local.d
 makefile root:root 0755 "$tmp"/etc/local.d/main.start <<EOF
-echo "Hello..."
-ifconfig eth0 up
-udhcpc eth0
 
-echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
-rc-service sshd restart
+if grep -q hypervisor /proc/cpuinfo && VBoxControl sharedfolder list | grep -q moonflower; then 
+	echo "Starting debug stuff..."
 
-mkdir -p /root/.ssh
-echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDH1/VRIVLxf0DZhSw+oktqqRBzhP9FayFRU8q+jFSozZez/MeqfgGNBCurbkJitoBf/BJm24XJgNw1gIXDzaxBR8dA6vspjF0rzoOGPKd4Y9CcVM+7r0R0LHLF9gtJIbzRXKjyXGPUnSwDPT1NSNf4ufyKlrSlyuDLBSD7mn/yGEGamKK8QwbZnAXuqUN399Ym21zhzaSiWhW2BF2poZ0yiVMaU3ioeCQ8xgPCrjejNYL8VTNm3kUbmOpaDeb/zRwkwcUgrfPbGsGNyC6+j0Pn1fCg8aaFQviHmIgZDxnR3vhvgOJxNgpeA2mbFlfoqfj3QptT2g636Ew2yn2/Uda3t7DB0zcgZCjDy6attzbLfAtp/lHQEAcL3wNwEMniw0I+Mbf5NKC6Dj8QS2kJTHwl0dqssNiRc3CvaK7nfDzTrk0q6T7DRUAPy9Q9vrXEkRztP1px9vGto+fGZCMVzJwoj+dRTBmwy44T4GD05d1BwUMybq4I0fDSJMO36Z+TKis= micke@micke-x455ya" > /root/.ssh/authorized_keys
+	ifconfig eth0 up
+	udhcpc eth0
 
-mkdir -p /root/moonflower
-mount.vboxsf moonflower /root/moonflower
+	echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+	rc-service sshd restart
+
+	mkdir -p /root/.ssh
+	echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDH1/VRIVLxf0DZhSw+oktqqRBzhP9FayFRU8q+jFSozZez/MeqfgGNBCurbkJitoBf/BJm24XJgNw1gIXDzaxBR8dA6vspjF0rzoOGPKd4Y9CcVM+7r0R0LHLF9gtJIbzRXKjyXGPUnSwDPT1NSNf4ufyKlrSlyuDLBSD7mn/yGEGamKK8QwbZnAXuqUN399Ym21zhzaSiWhW2BF2poZ0yiVMaU3ioeCQ8xgPCrjejNYL8VTNm3kUbmOpaDeb/zRwkwcUgrfPbGsGNyC6+j0Pn1fCg8aaFQviHmIgZDxnR3vhvgOJxNgpeA2mbFlfoqfj3QptT2g636Ew2yn2/Uda3t7DB0zcgZCjDy6attzbLfAtp/lHQEAcL3wNwEMniw0I+Mbf5NKC6Dj8QS2kJTHwl0dqssNiRc3CvaK7nfDzTrk0q6T7DRUAPy9Q9vrXEkRztP1px9vGto+fGZCMVzJwoj+dRTBmwy44T4GD05d1BwUMybq4I0fDSJMO36Z+TKis= micke@micke-x455ya" > /root/.ssh/authorized_keys
+
+	mkdir -p /root/moonflower
+	mount.vboxsf moonflower /root/moonflower
+fi
 EOF
 
 mkdir -p "$tmp"/etc/apk

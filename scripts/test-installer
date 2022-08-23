@@ -21,11 +21,11 @@ VBoxManage createhd --filename `pwd`/vm/installerdebug/installerdebug_DISK.vdi -
 VBoxManage storagectl installerdebug --name "SATA Controller" --add sata --controller IntelAhci
 VBoxManage storageattach installerdebug --storagectl "SATA Controller" --port 0 --device 0 --type hdd --medium  `pwd`/vm/installerdebug/installerdebug_DISK.vdi
 VBoxManage storagectl installerdebug --name "IDE Controller" --add ide --controller PIIX4
-VBoxManage storageattach installerdebug --storagectl "IDE Controller" --port 1 --device 0 --type dvddrive --medium `pwd`/iso/alpine-installerdebug-latest-x86_64.iso
+VBoxManage storageattach installerdebug --storagectl "IDE Controller" --port 1 --device 0 --type dvddrive --medium `pwd`/iso/alpine-moonflower-latest-x86_64.iso
 VBoxManage modifyvm installerdebug --boot1 dvd --boot2 disk --boot3 none --boot4 none
 
 VBoxManage sharedfolder add installerdebug --name moonflower --hostpath /home/micke/Repo.lab/moonflower
-VBoxManage sharedfolder add installerdebug --name micke --hostpath /home/micke/
+#VBoxManage sharedfolder add installerdebug --name micke --hostpath /home/micke/
 
 VBoxManage startvm installerdebug
 
