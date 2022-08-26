@@ -18,12 +18,17 @@ el.value+="Testing subprocess...\n";
 //let subprocess=spawn("/usr/bin/cat",["/awefawfwefhello"]);
 //let subprocess=spawn("/usr/bin/ls");
 let subprocess=spawn("/usr/bin/ls",[],{lines: true});
-subprocess.on("data",(data)=>{
+/*subprocess.on("data",(data)=>{
 	console.log("data: "+data);
 	el.value+=data;
 	el.scrollTop = el.scrollHeight;
-});
+});*/
 subprocess.on("close",(status)=>{
 	el.value+="Process closed: "+status+"\n";
 	console.log("Process closed: "+status);
 });
+/*setTimeout(()=>{
+	console.log("reading");
+	let a=sys.readCharCodeArray(20,1000);
+	console.log(a);
+},1000);*/
