@@ -296,6 +296,10 @@ static void window_resizeTo(int w, int h, WUNEXT *wunext) {
 	webkit_web_extension_send_message_to_context(wunext->extension,message,NULL,NULL,NULL);
 }
 
+static int sys_getpid(WUNEXT *wunext) {
+	return getpid();
+}
+
 static void sys_show(WUNEXT *wunext) {
 	WebKitUserMessage *message=webkit_user_message_new("show",NULL);
 	webkit_web_extension_send_message_to_context(wunext->extension,message,NULL,NULL,NULL);
@@ -395,6 +399,10 @@ window_object_cleared_callback (WebKitScriptWorld *world,
 
 	jsc_value_object_set_property(sys,"pipe",
 		jsc_value_new_function(context,"pipe",G_CALLBACK(sys_pipe),wunext,NULL,JSC_TYPE_VALUE,0)
+	);
+
+	jsc_value_object_set_property(sys,"getpid",
+		jsc_value_new_function(context,"getpid",G_CALLBACK(sys_getpid),wunext,NULL,G_TYPE_INT,0)
 	);
 
 	jsc_value_object_set_property(sys,"dup2",
