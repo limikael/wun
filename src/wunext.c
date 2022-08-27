@@ -7,11 +7,10 @@
 #include <gio/gunixfdlist.h>
 #include "wunext.h"
 #include <sys/signalfd.h>
+#include <spawn.h>
 
 static int wunext_signal_pipe=-1;
 static void wunext_signal_handler(int sig) {
-	//write(STDOUT_FILENO,"signal\n",7);
-
 	unsigned char data=sig;
 	write(wunext_signal_pipe,&data,1);
 }
@@ -21,8 +20,6 @@ static gboolean wunext_on_signal(GIOChannel *source, GIOCondition cond, gpointer
 	int fd=g_io_channel_unix_get_fd(source);
 	unsigned char sigdata;
 	int sig;
-
-	//printf("passing on signal..\n");
 
 	read(fd,&sigdata,1);
 	sig=sigdata;
@@ -149,7 +146,7 @@ static void sys_watch(int fd, int cond, JSCValue *cb, WUNEXT *wunext) {
 			}
 
 			if (cb) {
-				//watch->cond[i].source=g_io_add_watch(watch->channel,1<<i,wunext_on_watch,wunext);
+				watch->cond[i].source=g_io_add_watch(watch->channel,1<<i,wunext_on_watch,wunext);
 				watch->cond[i].cb=cb;
 				g_object_ref(cb);
 			}
@@ -204,32 +201,61 @@ static int sys_writeCharCodeArray(int fd, JSCValue *data, WUNEXT *wunext) {
 	return res;
 }
 
-/*static void wunext_on_child_exit(GPid pid, int status, gpointer data) {
-	WUNEXT *wunext=data;
-
-	JSCValue *sys=jsc_context_get_value(wunext->context,"sys");
-	JSCValue *emit=jsc_value_object_get_property(sys,"emit");
-	JSCValue *ret=jsc_value_function_call(emit,G_TYPE_STRING,"child",G_TYPE_INT,pid,G_TYPE_INT,status,G_TYPE_NONE);
-}*/
-
 static int sys_fork(WUNEXT *wunext) {
 	int res=fork();
 
 	if (res==-1)
 		wunext_throw(wunext,"fork");
 
-	if (res==0) {
-		int fdlimit=sysconf(_SC_OPEN_MAX);
-		printf("fdlimit: %d\n",fdlimit);
-		for (int i=STDERR_FILENO+1; i<fdlimit; i++)
-			close(i);
+	return res;
+}
+
+static int sys_pspawn(char *cmd, JSCValue *params, JSCValue *options, WUNEXT *wunext) {
+	int len=jsc_value_to_int32(jsc_value_object_get_property(params,"length"));
+	char *argv[len+2];
+
+	argv[0]=cmd;
+	for (int i=0; i<len; i++)
+		argv[i+1]=jsc_value_to_string(jsc_value_object_get_property_at_index(params,i));
+	argv[len+1]=NULL;
+
+	posix_spawn_file_actions_t actions;
+	posix_spawn_file_actions_init(&actions);
+
+	if (jsc_value_is_object(options)) {
+		JSCValue *dup=jsc_value_object_get_property(options,"dup");
+		if (jsc_value_is_object(dup)) {
+			int ndup=jsc_value_to_int32(jsc_value_object_get_property(dup,"length"));
+			for (int i=0; i<ndup/2; i++)
+				posix_spawn_file_actions_adddup2(&actions,
+					jsc_value_to_int32(jsc_value_object_get_property_at_index(dup,i*2)),
+					jsc_value_to_int32(jsc_value_object_get_property_at_index(dup,i*2+1))
+				);
+		}
+
+		JSCValue *cls=jsc_value_object_get_property(options,"close");
+		if (jsc_value_is_object(cls)) {
+			int ncls=jsc_value_to_int32(jsc_value_object_get_property(cls,"length"));
+			for (int i=0; i<ncls; i++)
+				posix_spawn_file_actions_addclose(&actions,
+					jsc_value_to_int32(jsc_value_object_get_property_at_index(cls,i))
+				);
+		}
 	}
 
-	/*if (res!=0) {
-		g_child_watch_add(res,wunext_on_child_exit,wunext);
-	}*/
+	int pid,res=posix_spawn(&pid,cmd,&actions,NULL,argv,NULL);
 
-	return res;
+	for (int i=0; i<len; i++)
+		g_free(argv[i+1]);
+
+	posix_spawn_file_actions_destroy(&actions);
+
+	if (res!=0) {
+		wunext_throw(wunext,"pspawn");
+		return -1;
+	}
+
+	return pid;
 }
 
 static void sys_exec(char *cmd, JSCValue *params, WUNEXT *wunext) {
@@ -298,7 +324,6 @@ static void console_log(char *s) {
 	char *t=g_strdup_printf("%s\n",s);
 	write(STDOUT_FILENO,t,strlen(t));
 	g_free(t);
-	//printf("%s\n",s);
 }
 
 static void sys_exit(int code, WUNEXT *wunext) {
@@ -408,6 +433,10 @@ window_object_cleared_callback (WebKitScriptWorld *world,
 
 	jsc_value_object_set_property(sys,"writeCharCodeArray",
 		jsc_value_new_function(context,"writeCharCodeArray",G_CALLBACK(sys_writeCharCodeArray),wunext,NULL,G_TYPE_INT,2,G_TYPE_INT,JSC_TYPE_VALUE)
+	);
+
+	jsc_value_object_set_property(sys,"pspawn",
+		jsc_value_new_function(context,"pspawn",G_CALLBACK(sys_pspawn),wunext,NULL,G_TYPE_INT,3,G_TYPE_STRING,JSC_TYPE_VALUE,JSC_TYPE_VALUE)
 	);
 
 	jsc_value_object_set_property(sys,"fork",

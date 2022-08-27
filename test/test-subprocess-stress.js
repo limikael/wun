@@ -16,11 +16,17 @@ function delay(millis) {
 
 async function main() {
 	console.log("pid: "+sys.getpid());
+	let promises=[];
+
 	for (let i=0; i<1000; i++) {
 		console.log("Iteration: "+i);
-		await call("/usr/bin/echo",[i]);
-//		await delay(100);
+		//promises.push(call("/usr/bin/echo",["hello: ",i]));
+
+		let out=await call("/usr/bin/echo",["hello: ",i]);
+		console.log("out: "+out.trim());
 	}
+
+	await Promise.all(promises);
 
 	console.log("done...");
 }
