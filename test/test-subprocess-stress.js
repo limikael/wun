@@ -18,7 +18,7 @@ async function main() {
 	console.log("pid: "+sys.getpid());
 	for (let i=0; i<1000; i++) {
 		console.log("Iteration: "+i);
-		await call("/bin/ls");
+		await call("/usr/bin/echo",[i]);
 //		await delay(100);
 	}
 

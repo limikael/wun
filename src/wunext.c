@@ -10,7 +10,7 @@
 
 static int wunext_signal_pipe=-1;
 static void wunext_signal_handler(int sig) {
-	write(STDOUT_FILENO,"signal\n",7);
+	//write(STDOUT_FILENO,"signal\n",7);
 
 	unsigned char data=sig;
 	write(wunext_signal_pipe,&data,1);
@@ -22,7 +22,7 @@ static gboolean wunext_on_signal(GIOChannel *source, GIOCondition cond, gpointer
 	unsigned char sigdata;
 	int sig;
 
-	printf("passing on signal..\n");
+	//printf("passing on signal..\n");
 
 	read(fd,&sigdata,1);
 	sig=sigdata;
@@ -218,6 +218,13 @@ static int sys_fork(WUNEXT *wunext) {
 	if (res==-1)
 		wunext_throw(wunext,"fork");
 
+	if (res==0) {
+		int fdlimit=sysconf(_SC_OPEN_MAX);
+		printf("fdlimit: %d\n",fdlimit);
+		for (int i=STDERR_FILENO+1; i<fdlimit; i++)
+			close(i);
+	}
+
 	/*if (res!=0) {
 		g_child_watch_add(res,wunext_on_child_exit,wunext);
 	}*/
@@ -230,13 +237,13 @@ static void sys_exec(char *cmd, JSCValue *params, WUNEXT *wunext) {
 	char *args[len+2];
 
 	args[0]=cmd;
-
 	for (int i=0; i<len; i++)
 		args[i+1]=jsc_value_to_string(jsc_value_object_get_property_at_index(params,i));
-
 	args[len+1]=NULL;
 
-	int res=execv(cmd,args);
+	char *env[1]={NULL};
+
+	int res=execve(cmd,args,env);
 	if (res==-1)
 		wunext_throw(wunext,"exec");
 }
@@ -288,7 +295,10 @@ static JSCValue *sys_waitpid(int pid, int flags, WUNEXT *wunext) {
 }
 
 static void console_log(char *s) {
-	printf("%s\n",s);
+	char *t=g_strdup_printf("%s\n",s);
+	write(STDOUT_FILENO,t,strlen(t));
+	g_free(t);
+	//printf("%s\n",s);
 }
 
 static void sys_exit(int code, WUNEXT *wunext) {
@@ -461,8 +471,8 @@ window_object_cleared_callback (WebKitScriptWorld *world,
 }
 
 G_MODULE_EXPORT void webkit_web_extension_initialize(WebKitWebExtension *extension) {
-	/*if (wunext_signal_pipe!=-1)
-		printf("Warning: webkit_web_extension_initialize called twice\n");*/
+	if (wunext_signal_pipe!=-1)
+		printf("Warning: webkit_web_extension_initialize called twice\n");
 
 	WUNEXT *wunext=g_malloc(sizeof(WUNEXT));
 	wunext->extension=extension;
@@ -474,19 +484,6 @@ G_MODULE_EXPORT void webkit_web_extension_initialize(WebKitWebExtension *extensi
 	wunext->signal_channel=g_io_channel_unix_new(pipes[0]);
 	wunext->signal_source=g_io_add_watch(wunext->signal_channel,G_IO_IN,wunext_on_signal,wunext);
 	signal(SIGCHLD,wunext_signal_handler);
-
-	/*sigset_t mask;
-	sigemptyset(&mask);
-	sigaddset(&mask,SIGCHLD);
-	sigprocmask(SIG_BLOCK, &mask, NULL);
-	int sigfd=signalfd(-1,&mask,0);
-	printf("sigfd: %d\n",sigfd);
-	wunext->signal_channel=g_io_channel_unix_new(sigfd);
-	//g_io_channel_set_close_on_unref(wunext->signal_channel, TRUE);
-	//g_io_channel_set_encoding(wunext->signal_channel, NULL, NULL);
-	//g_io_channel_set_buffered(wunext->signal_channel, FALSE);
-	wunext->signal_source=g_io_add_watch(wunext->signal_channel,G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL,wunext_on_signal,wunext);
-	//g_io_channel_unref(wunext->signal_channel);*/
 
 	g_signal_connect(
 		webkit_script_world_get_default(),
